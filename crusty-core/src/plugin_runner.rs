@@ -105,3 +105,34 @@ pub fn verify_plugin(plugin_path: &str, plugin_type: PluginType) -> bool {
     }
     valid
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::os::unix::fs::PermissionsExt;
+
+    /// Run subprocess_plugin with a script that echoes stdin to stdout (Unix).
+    #[test]
+    #[cfg(unix)]
+    fn run_subprocess_plugin_echo() {
+        let dir = tempfile::tempdir().unwrap();
+        let script = dir.path().join("run.sh");
+        fs::write(&script, "#!/bin/sh\ncat\n").unwrap();
+        fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let out = run_subprocess_plugin(script.to_str().unwrap(), b"hello", &PluginOptions::new()).unwrap();
+        assert_eq!(out, b"hello");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn run_subprocess_plugin_env_input() {
+        let dir = tempfile::tempdir().unwrap();
+        let script = dir.path().join("run.sh");
+        // Script that outputs PLUGIN_INPUT to stdout
+        fs::write(&script, "#!/bin/sh\nprintf '%s' \"$PLUGIN_INPUT\"\n").unwrap();
+        fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let out = run_subprocess_plugin(script.to_str().unwrap(), b"env-content", &PluginOptions::new()).unwrap();
+        assert_eq!(out, b"env-content");
+    }
+}

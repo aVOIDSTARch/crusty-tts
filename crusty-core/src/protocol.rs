@@ -59,3 +59,51 @@ pub struct ErrorFrame {
     #[serde(default)]
     pub fatal: bool,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    #[test]
+    fn write_read_frame_roundtrip() {
+        let payload = b"hello world";
+        let mut buf = Vec::new();
+        write_frame(&mut buf, payload).unwrap();
+        let mut cur = Cursor::new(buf);
+        let read = read_frame(&mut cur).unwrap().unwrap();
+        assert_eq!(read.as_slice(), payload);
+    }
+
+    #[test]
+    fn read_frame_empty_len() {
+        let mut cur = Cursor::new([0u8; 4]); // length 0
+        let read = read_frame(&mut cur).unwrap().unwrap();
+        assert!(read.is_empty());
+    }
+
+    #[test]
+    fn read_frame_eof_returns_none() {
+        let mut cur = Cursor::new(&[][..]);
+        let read = read_frame(&mut cur).unwrap();
+        assert!(read.is_none());
+    }
+
+    #[test]
+    fn handshake_new() {
+        let h = Handshake::new("text/plain", "audio/wav", serde_json::json!({"voice": "en"}));
+        assert_eq!(h.protocol, PROTOCOL_VERSION);
+        assert_eq!(h.input_type, "text/plain");
+        assert_eq!(h.output_type, "audio/wav");
+        assert_eq!(h.config.get("voice").and_then(|v| v.as_str()), Some("en"));
+    }
+
+    #[test]
+    fn error_frame_serialize() {
+        let e = ErrorFrame { typ: "error".into(), message: "fail".into(), fatal: true };
+        let j = serde_json::to_string(&e).unwrap();
+        assert!(j.contains("fail"));
+        let e2: ErrorFrame = serde_json::from_str(&j).unwrap();
+        assert!(e2.fatal);
+    }
+}

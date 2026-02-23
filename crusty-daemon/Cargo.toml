@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 description = "Crusty-TTS daemon: REST API, job management, same execute_pipeline core"
 
+[lib]
+name = "crusty_daemon"
+path = "src/lib.rs"
+
 [[bin]]
 name = "crusty-daemon"
 path = "src/main.rs"
@@ -18,3 +22,6 @@ uuid = { version = "0.8", features = ["v4"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 toml = "0.8"
+
+[dev-dependencies]
+tower = { version = "0.4", features = ["util"] }

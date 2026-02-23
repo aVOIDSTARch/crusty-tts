@@ -90,3 +90,95 @@ impl Orchestration {
         Self::from_toml(&s)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const MINIMAL_ORCH: &str = r#"
+[meta]
+name = "test"
+version = "0.1.0"
+author = "Test"
+
+[input]
+type = "text"
+source = "input.txt"
+
+[tts]
+name = "tts"
+module = "plugins/tts"
+
+[output]
+type = "file"
+path = "out.bin"
+"#;
+
+    #[test]
+    fn from_toml_minimal() {
+        let o = Orchestration::from_toml(MINIMAL_ORCH).unwrap();
+        assert_eq!(o.meta.name, "test");
+        assert_eq!(o.input.source, "input.txt");
+        assert_eq!(o.tts.name, "tts");
+        assert_eq!(o.output.path, "out.bin");
+        assert!(o.pre_processors.is_none());
+        assert!(o.audio_converters.is_none());
+        assert!(o.post_processors.is_none());
+    }
+
+    #[test]
+    fn from_toml_with_pre_and_post() {
+        let s = r#"
+[meta]
+name = "full"
+version = "0.1.0"
+author = "A"
+
+[input]
+type = "text"
+source = "in.txt"
+
+[[pre_processors]]
+name = "pre"
+module = "plugins/pre"
+enabled = true
+
+[tts]
+name = "tts"
+module = "plugins/tts"
+voice = "en"
+
+[[post_processors]]
+name = "post"
+module = "plugins/post"
+
+[output]
+type = "file"
+path = "out.mp3"
+"#;
+        let o = Orchestration::from_toml(s).unwrap();
+        assert_eq!(o.pre_processors.as_ref().unwrap().len(), 1);
+        assert_eq!(o.pre_processors.as_ref().unwrap()[0].name, "pre");
+        assert_eq!(o.post_processors.as_ref().unwrap().len(), 1);
+        assert_eq!(o.tts.voice.as_deref(), Some("en"));
+    }
+
+    #[test]
+    fn from_toml_invalid_fails() {
+        assert!(Orchestration::from_toml("invalid = [").is_err());
+        assert!(Orchestration::from_toml("[meta]\nname = 1").is_err());
+    }
+
+    #[test]
+    fn pipeline_orchestration_parse() {
+        let s = r#"
+[pipeline]
+order = ["A", "B"]
+
+[A.options]
+x = "1"
+"#;
+        let o: super::PipelineOrchestration = toml::from_str(s).unwrap();
+        assert_eq!(o.pipeline.order, &["A", "B"]);
+    }
+}

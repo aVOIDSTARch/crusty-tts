@@ -77,6 +77,42 @@ pub fn execute_pipeline(orchestration: &Orchestration, plugin_base_dir: &Path) -
     Ok(audio)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn options_from_toml_test(v: Option<&toml::Value>) -> PluginOptions {
+        let mut opts = PluginOptions::new();
+        let Some(tbl) = v.and_then(|v| v.as_table()) else { return opts };
+        for (k, v) in tbl {
+            let s = match v {
+                toml::Value::String(s) => s.clone(),
+                toml::Value::Integer(i) => i.to_string(),
+                toml::Value::Float(f) => f.to_string(),
+                toml::Value::Boolean(b) => b.to_string(),
+                _ => continue,
+            };
+            opts.insert(k.clone(), s);
+        }
+        opts
+    }
+
+    #[test]
+    fn options_from_toml_parses_table() {
+        let t = toml::from_str::<toml::Value>(r#"[voice]
+foo = "bar"
+n = 1
+"#).unwrap();
+        let opts = options_from_toml_test(Some(&t));
+        assert_eq!(opts.get("voice"), None); // voice is a table, not a string
+        let t2 = toml::from_str::<toml::Value>(r#"voice = "en"
+rate = 1.5"#).unwrap();
+        let opts2 = options_from_toml_test(Some(&t2));
+        assert_eq!(opts2.get("voice"), Some(&"en".to_string()));
+        assert_eq!(opts2.get("rate"), Some(&"1.5".to_string()));
+    }
+}
+
 fn options_from_toml(v: Option<&toml::Value>) -> PluginOptions {
     let mut opts = PluginOptions::new();
     let Some(tbl) = v.and_then(|v| v.as_table()) else { return opts };

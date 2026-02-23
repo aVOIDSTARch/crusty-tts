@@ -89,3 +89,39 @@ pub trait PostProcessor {
     fn name(&self) -> &str;
     fn process(&self, input: &[u8], options: &PluginOptions) -> Vec<u8>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn plugin_type_as_str() {
+        assert_eq!(PluginType::Pre.as_str(), "pre");
+        assert_eq!(PluginType::Tts.as_str(), "tts");
+        assert_eq!(PluginType::Post.as_str(), "post");
+        assert_eq!(PluginType::Converter.as_str(), "converter");
+    }
+
+    #[test]
+    fn manifest_deserialize() {
+        let s = r#"
+name = "test-plugin"
+version = "0.1.0"
+type = "tts"
+description = "A test"
+
+[capabilities]
+input = ["text/plain"]
+output = ["audio/wav"]
+tts = true
+
+[options]
+voice = { type = "string", default = "en" }
+"#;
+        let m: PluginManifest = toml::from_str(s).unwrap();
+        assert_eq!(m.name, "test-plugin");
+        assert_eq!(m.r#type.as_deref(), Some("tts"));
+        assert!(m.capabilities.as_ref().unwrap().tts == Some(true));
+        assert_eq!(m.capabilities.as_ref().unwrap().input.as_ref().unwrap()[0], "text/plain");
+    }
+}

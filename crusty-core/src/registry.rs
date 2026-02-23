@@ -109,3 +109,58 @@ impl PluginRegistry {
             .collect()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::path::PathBuf;
+
+    fn make_temp_plugin_dir() -> (tempfile::TempDir, PathBuf) {
+        let dir = tempfile::tempdir().unwrap();
+        let plugin_path = dir.path().join("my-tts");
+        fs::create_dir_all(&plugin_path).unwrap();
+        fs::write(
+            plugin_path.join("plugin.toml"),
+            r#"
+name = "my-tts"
+version = "0.1.0"
+type = "tts"
+[capabilities]
+input = ["text/plain"]
+output = ["audio/wav"]
+"#,
+        )
+        .unwrap();
+        (dir, plugin_path)
+    }
+
+    #[test]
+    fn load_plugins_discovers_one() {
+        let ( _guard, plugin_path) = make_temp_plugin_dir();
+        let parent = plugin_path.parent().unwrap();
+        let reg = PluginRegistry::load_plugins(parent).unwrap();
+        assert_eq!(reg.tts.len(), 1);
+        assert_eq!(reg.tts[0].name, "my-tts");
+        assert!(reg.get("my-tts").is_some());
+        assert!(reg.get("missing").is_none());
+    }
+
+    #[test]
+    fn load_plugins_empty_dir_ok() {
+        let dir = tempfile::tempdir().unwrap();
+        let reg = PluginRegistry::load_plugins(dir.path()).unwrap();
+        assert!(reg.all().is_empty());
+    }
+
+    #[test]
+    fn pipeline_order_filters() {
+        let (_guard, plugin_path) = make_temp_plugin_dir();
+        let reg = PluginRegistry::load_plugins(plugin_path.parent().unwrap()).unwrap();
+        let order = reg.pipeline_order(&["my-tts".into()]);
+        assert_eq!(order.len(), 1);
+        assert_eq!(order[0].name, "my-tts");
+        let order_missing = reg.pipeline_order(&["my-tts".into(), "nope".into()]);
+        assert_eq!(order_missing.len(), 1);
+    }
+}
