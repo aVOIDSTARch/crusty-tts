@@ -1,0 +1,20 @@
+[package]
+name = "crusty-daemon"
+version = "0.1.0"
+edition = "2021"
+description = "Crusty-TTS daemon: REST API, job management, same execute_pipeline core"
+
+[[bin]]
+name = "crusty-daemon"
+path = "src/main.rs"
+
+[dependencies]
+crusty-core = { path = "../crusty-core" }
+anyhow = "1.0"
+axum = { version = "0.7", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.5", features = ["cors"] }
+uuid = { version = "0.8", features = ["v4"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"

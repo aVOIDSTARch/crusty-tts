@@ -1,0 +1,14 @@
+name = "sample-tts"
+version = "0.1.0"
+type = "tts"
+description = "Sample TTS plugin (echoes text as bytes for testing)"
+
+[capabilities]
+preprocessor = false
+tts = true
+postprocessor = false
+output_formats = ["wav"]
+
+[options]
+voice = { type = "string", default = "en_us" }
+rate = { type = "float", default = "1.0" }

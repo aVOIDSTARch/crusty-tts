@@ -1,0 +1,11 @@
+name = "mp3-converter"
+version = "0.1.0"
+type = "converter"
+description = "Pass-through converter for testing (real impl would use ffmpeg/lame)"
+
+[capabilities]
+output_formats = ["mp3"]
+
+[options]
+format = { type = "string", default = "mp3" }
+bitrate = { type = "string", default = "192k" }

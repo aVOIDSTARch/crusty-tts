@@ -1,0 +1,10 @@
+[package]
+name = "crusty-cli"
+version = "0.1.0"
+edition = "2021"
+description = "Crusty-TTS CLI: run orchestration, stream to file/stdout"
+
+[dependencies]
+crusty-core = { path = "../crusty-core" }
+anyhow = "1.0"
+toml = "0.8"
