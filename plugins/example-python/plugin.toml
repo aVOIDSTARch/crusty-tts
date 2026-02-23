@@ -1,0 +1,13 @@
+name = "example-python"
+version = "0.1.0"
+type = "tts"
+description = "Minimal Python TTS plugin (echoes input as bytes for testing)"
+
+[capabilities]
+input = ["text/plain", "text"]
+output = ["audio/raw", "audio/wav"]
+mode = "streaming"
+
+[options]
+voice = { type = "string", default = "en_us" }
+rate = { type = "float", default = "1.0" }

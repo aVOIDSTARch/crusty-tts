@@ -10,7 +10,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use crusty_core::{execute_pipeline, Orchestration, PluginRegistry};
+use crusty_core::{execute_pipeline, validate_orchestration_types, Orchestration, PluginRegistry};
 use state::AppState;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -110,6 +110,9 @@ async fn validate_pipeline(
             let tts_path = plugin_base.join(&orch.tts.module);
             if !tts_path.join("run.sh").exists() && !tts_path.join("run.py").exists() {
                 errors.push(format!("TTS {} missing run.sh/run.py", orch.tts.name));
+            }
+            if let Err(e) = validate_orchestration_types(&orch, plugin_base) {
+                errors.push(format!("type validation: {}", e));
             }
             if errors.is_empty() {
                 (StatusCode::OK, Json(serde_json::json!({"valid": true})))

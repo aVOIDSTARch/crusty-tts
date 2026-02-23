@@ -181,7 +181,7 @@ fn plugin_to_tts_config(p: &crusty_core::Plugin, _plugins_dir: &Path) -> TtsConf
 }
 
 fn run_pipeline(args: &[String]) -> Result<()> {
-    let (orchestration_path, plugin_dir, input_override) = parse_args(args)?;
+    let (orchestration_path, plugin_dir, input_override, output_override) = parse_args(args)?;
 
     let mut orchestration = Orchestration::load_path(&orchestration_path)?;
     let plugin_base = plugin_dir.unwrap_or_else(|| {
@@ -202,19 +202,38 @@ fn run_pipeline(args: &[String]) -> Result<()> {
 
     let audio = execute_pipeline(&orchestration, &plugin_base)?;
 
-    let out_path = PathBuf::from(&orchestration.output.path);
-    if let Some(p) = out_path.parent() {
-        std::fs::create_dir_all(p)?;
+    match output_override.as_deref() {
+        Some("-") => {
+            io::stdout().write_all(&audio)?;
+            io::stdout().flush()?;
+        }
+        Some(path) => {
+            let out_path = PathBuf::from(path);
+            if let Some(p) = out_path.parent() {
+                std::fs::create_dir_all(p)?;
+            }
+            std::fs::write(path, &audio)?;
+            eprintln!("Wrote {} bytes to {}", audio.len(), path);
+        }
+        None => {
+            let out_path = PathBuf::from(&orchestration.output.path);
+            if let Some(p) = out_path.parent() {
+                std::fs::create_dir_all(p)?;
+            }
+            std::fs::write(&orchestration.output.path, &audio)?;
+            eprintln!("Wrote {} bytes to {}", audio.len(), orchestration.output.path);
+        }
     }
-    std::fs::write(&orchestration.output.path, &audio)?;
-    eprintln!("Wrote {} bytes to {}", audio.len(), orchestration.output.path);
     Ok(())
 }
 
-fn parse_args(args: &[String]) -> Result<(PathBuf, Option<PathBuf>, Option<String>)> {
+fn parse_args(
+    args: &[String],
+) -> Result<(PathBuf, Option<PathBuf>, Option<String>, Option<String>)> {
     let mut orch = PathBuf::from("orchestration.cr");
     let mut plugin_dir = None;
     let mut input_override = None;
+    let mut output_override = None;
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
@@ -246,6 +265,13 @@ fn parse_args(args: &[String]) -> Result<(PathBuf, Option<PathBuf>, Option<Strin
                     i += 1;
                 }
             }
+            "--output" => {
+                i += 1;
+                if i < args.len() {
+                    output_override = Some(args[i].clone());
+                    i += 1;
+                }
+            }
             _ => {
                 if orch == PathBuf::from("orchestration.cr") && !args[i].starts_with('-') {
                     orch = PathBuf::from(&args[i]);
@@ -254,5 +280,5 @@ fn parse_args(args: &[String]) -> Result<(PathBuf, Option<PathBuf>, Option<Strin
             }
         }
     }
-    Ok((orch, plugin_dir, input_override))
+    Ok((orch, plugin_dir, input_override, output_override))
 }
